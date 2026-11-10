@@ -55,9 +55,10 @@ async def exercise(session):
     assert '"upsampler": false' in text
     assert '"cpu_offload": false' in text
     # These tests intentionally have no model weights. A real submission must fail honestly.
-    submitted = await session.call_tool("generate_image", {"prompt": "A complete scene caption", "width": 256, "height": 256})
+    submitted = await session.call_tool("generate_image", {"prompt": "A complete scene caption", "width": 256, "height": 256, "seed": -1})
     assert not submitted.isError
     job_id = submitted.structuredContent["job_id"]
+    assert 0 <= submitted.structuredContent["request"]["seed"] < 2**32
     for _ in range(40):
         response = await session.call_tool("get_image_job", {"job_id": job_id})
         if response.structuredContent["status"] == "failed":

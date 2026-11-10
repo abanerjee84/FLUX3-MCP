@@ -6,6 +6,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
+from pydantic import ValidationError
 
 from flux_image.config import Settings
 from flux_image.jobs import JobStore
@@ -69,6 +70,40 @@ def test_queue_serializes_and_idempotent_retry(tmp_path):
         store.close()
 
 
+@pytest.mark.parametrize("seed", [None, -1, 0, 2**32 - 1])
+def test_seed_resolution_is_persisted_and_retries_do_not_redraw(tmp_path, monkeypatch, seed):
+    from unittest.mock import Mock
+
+    draw = Mock(return_value=1234)
+    monkeypatch.setattr("flux_image.jobs.secrets.randbelow", draw)
+    store = JobStore(tmp_path, TestBackend(tmp_path))
+    req = ImageRequest(prompt="Scene", seed=seed, client_request_id="seed-retry")
+    first = store.submit(req)
+    expected = 1234 if seed in (None, -1) else seed
+    assert first["request"]["seed"] == expected
+    assert req.seed == seed
+    assert store.submit(req)["job_id"] == first["job_id"]
+    recovered = JobStore(tmp_path, TestBackend(tmp_path))
+    assert recovered.submit(req)["request"]["seed"] == expected
+    assert draw.call_count == (1 if seed in (None, -1) else 0)
+
+
+def test_random_seed_is_drawn_for_each_new_job(tmp_path, monkeypatch):
+    from unittest.mock import Mock
+
+    monkeypatch.setattr("flux_image.jobs.secrets.randbelow", Mock(side_effect=[17, 29]))
+    store = JobStore(tmp_path, TestBackend(tmp_path))
+    req = ImageRequest(prompt="Scene", seed=-1)
+    assert store.submit(req)["request"]["seed"] == 17
+    assert store.submit(req)["request"]["seed"] == 29
+
+
+@pytest.mark.parametrize("seed", [-2, 2**32, 1.5])
+def test_seed_bounds(seed):
+    with pytest.raises(ValidationError):
+        ImageRequest(prompt="Scene", seed=seed)
+
+
 def test_cancellation_and_restart_recovery(tmp_path):
     store = JobStore(tmp_path, TestBackend(tmp_path))
     job = store.submit(ImageRequest(prompt="cancel"))
@@ -114,10 +149,11 @@ def test_http_auth_inputs_artifacts_and_limits(tmp_path):
         assert uploaded.status_code == 201
         assert http.post("/v1/images", content=image.getvalue()).json()["image_id"] == uploaded.json()["image_id"]
         req = {"prompt": "target scene", "width": 256, "height": 256,
-               "reference_images": [uploaded.json()["image_id"]], "client_request_id": "edit-1"}
+               "reference_images": [uploaded.json()["image_id"]], "client_request_id": "edit-1", "seed": -1}
         response = http.post("/v1/jobs", json=req)
         assert response.status_code == 202
         job_id = response.json()["job_id"]
+        assert 0 <= response.json()["request"]["seed"] < 2**32
         assert http.post("/v1/jobs", json=req).json()["job_id"] == job_id
         assert wait(app.state.store, job_id)["status"] == "succeeded"
         assert http.get(f"/v1/jobs/{job_id}/image").headers["content-type"] == "image/png"

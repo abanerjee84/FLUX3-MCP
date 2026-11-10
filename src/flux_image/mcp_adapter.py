@@ -32,7 +32,10 @@ def create_mcp(settings: Settings, autostart=True):
     async def generate_image(prompt: str, width: int = 768, height: int = 768,
                              steps: int = 16, seed: int | None = None,
                              client_request_id: str | None = None) -> CallToolResult:
-        """Queue an image from a complete scene caption. Returns job_id; no model inference blocks this call."""
+        """Queue an image from a complete scene caption. Use seed=-1 or omit for a random seed.
+
+        Returns job_id; no model inference blocks this call.
+        """
         req = ImageRequest(prompt=prompt, width=width, height=height, steps=steps, seed=seed,
                            client_request_id=client_request_id)
         return structured(await asyncio.to_thread(client.submit, req.model_dump()))
@@ -49,6 +52,7 @@ def create_mcp(settings: Settings, autostart=True):
         """Queue an edit. References are upload_image IDs, prior successful job IDs, or absolute local image paths.
 
         Supply a complete target scene caption with the edit incorporated. Up to four references.
+        Use seed=-1 or omit for a random seed.
         """
         if not 1 <= len(reference_images) <= 4:
             raise ValueError("Provide one to four reference images")

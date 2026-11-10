@@ -386,6 +386,8 @@ flux-image cancel JOB_ID
 
 A stable request ID makes retries of the identical request return the original job and seed. A different request using that ID is rejected. Closing a client or timing out a wait does not cancel inference.
 
+Use `--seed -1` for a random seed in generation or editing. Omitting the seed, or sending `null` through HTTP/MCP, also selects a random seed. The service chooses a nonnegative 32-bit value once when it queues the job and stores that value in the request and output metadata. Retrying with the same request ID reuses the original job and resolved seed; submit without that ID or use a new one for a fresh random draw.
+
 ## Complete CLI reference
 
 | Command | Behavior |
@@ -420,7 +422,7 @@ Shared generation/editing options:
 | `--width INTEGER` | Output width | 768 |
 | `--height INTEGER` | Output height | 768 |
 | `--steps INTEGER` | Sampling steps | 16 |
-| `--seed INTEGER` | Seed from 0 to 4294967295 | Random |
+| `--seed INTEGER` | Fixed seed from 0 to 4294967295; `-1` selects random | Random |
 | `--request-id TEXT` | Retry identity for an identical request | Unset |
 | `--wait` | Wait for completion | Off |
 | `--timeout SECONDS` | Wait limit, not an inference cancellation timer | 1800 |

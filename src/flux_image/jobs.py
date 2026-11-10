@@ -65,7 +65,7 @@ class JobStore:
                     previous = json.loads(old[1])
                     current = req.model_dump()
                     # An automatically chosen seed is not part of retry identity.
-                    if current["seed"] is None:
+                    if current["seed"] in (None, -1):
                         current["seed"] = previous["seed"]
                     if current != previous:
                         raise ValueError("client_request_id already belongs to a different request")
@@ -74,7 +74,7 @@ class JobStore:
             if count >= 32:
                 raise OverflowError("Queue is full (32 jobs)")
             data = req.model_dump()
-            if data["seed"] is None:
+            if data["seed"] in (None, -1):
                 data["seed"] = secrets.randbelow(2**32)
             job_id = uuid.uuid4().hex
             now = time.time()

@@ -11,7 +11,8 @@ class ImageRequest(BaseModel):
     width: Annotated[int, Field(ge=256, le=2048, multiple_of=16)] = 768
     height: Annotated[int, Field(ge=256, le=2048, multiple_of=16)] = 768
     steps: Annotated[int, Field(ge=4, le=16)] = 16
-    seed: Annotated[int, Field(ge=0, le=2**32 - 1)] | None = None
+    seed: Annotated[int, Field(ge=-1, le=2**32 - 1,
+        description="Use -1, null or omit for a random seed.")] | None = None
     reference_images: list[Annotated[str, Field(pattern=r"^[a-f0-9]{32}$")]] = Field(default_factory=list, max_length=4)
     client_request_id: Annotated[str, Field(min_length=1, max_length=128)] | None = None
 

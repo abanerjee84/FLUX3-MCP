@@ -38,7 +38,7 @@ def main():
         cmd.add_argument("--width", type=int, default=768)
         cmd.add_argument("--height", type=int, default=768)
         cmd.add_argument("--steps", type=int, default=16)
-        cmd.add_argument("--seed", type=int)
+        cmd.add_argument("--seed", type=int, help="Use -1 or omit for a random seed")
         cmd.add_argument("--request-id")
         cmd.add_argument("--wait", action="store_true")
         cmd.add_argument("--timeout", type=float, default=1800)
