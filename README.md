@@ -12,11 +12,15 @@ Built and tested for an **NVIDIA RTX 3060 with 12 GB VRAM on Windows**:
 
 **Model weights are not included in this repository.** A separate setup command downloads the pinned files from Hugging Face into an ignored local directory.
 
+For a first installation, follow the [step-by-step guide](#installation) or give an agent the [installation brief](#installation-instructions-for-an-agent). For daily use, jump to [common commands](#common-commands-start-to-stop).
+
 ## Contents
 
 - [Measured results](#measured-results)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Installation instructions for an agent](#installation-instructions-for-an-agent)
+- [Common commands: start to stop](#common-commands-start-to-stop)
 - [Generate and edit](#generate-and-edit)
 - [Complete CLI reference](#complete-cli-reference)
 - [Agent harness integration](#agent-harness-integration)
@@ -66,75 +70,262 @@ The implementation deliberately requires a GPU name containing `RTX 3060`. Other
 
 ## Installation
 
-### 1. Install uv and clone
+Use **PowerShell** for the commands below. Paste one block at a time. You do not need to install Python yourself or activate a virtual environment manually.
 
-In PowerShell:
+Already installed? Go straight to [Common commands: start to stop](#common-commands-start-to-stop). To delegate a new installation, copy the [agent installation instructions](#installation-instructions-for-an-agent).
 
-```powershell
-winget install --id=astral-sh.uv -e
-```
+### 1. Check your GPU and install the two setup tools
 
-Open a new terminal after installing uv, then clone into a permanent location:
+This build targets **Windows x64 with an RTX 3060 12 GB**. Check that Windows can see it:
 
 ```powershell
-git clone https://github.com/abanerjee84/FLUX3-MCP.git
-Set-Location FLUX3-MCP
+nvidia-smi
 ```
 
-The installation is editable. Keep this checkout in place: the launcher and MCP registrations point to its environment.
+If that command is missing or does not show the intended GPU, install or repair your NVIDIA driver before continuing. See [Requirements](#requirements) for the tested driver and hardware scope.
 
-### 2. Install the environment
+Check whether Git and uv are already available:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -RegisterCodex
+git --version
+uv --version
 ```
 
-The execution-policy override applies to this PowerShell process. Setup installs managed Python 3.12 when needed, creates `.venv`, installs CUDA PyTorch and locked dependencies, installs this package, adds a launcher to the Windows user PATH, and optionally registers Codex MCP.
+Install only the tool that is missing, or both if this is a fresh machine:
 
-Omit `-RegisterCodex` if you do not use Codex. The default setup does not download models.
+```powershell
+winget install --id Git.Git -e --source winget
+winget install --id astral-sh.uv -e
+```
 
-### 3. Enable model access and authenticate
+Then **close and reopen PowerShell** so the new commands are on PATH. If you do not have WinGet, use the official [Git for Windows](https://git-scm.com/install/windows) and [uv installation](https://docs.astral.sh/uv/getting-started/installation/) instructions.
 
-Review both official repositories. If an access form is displayed, complete it using the same account as the local token:
+### 2. Choose a permanent folder and clone the project
 
-- [black-forest-labs/flux-3-image-klein](https://huggingface.co/black-forest-labs/flux-3-image-klein)
-- [black-forest-labs/flux-3-image-klein-comfy](https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy)
+These examples use `E:\TOOLS\FLUX3-MCP`. If you do not have an E: drive, replace that location with a permanent folder on your machine. Keep the same location throughout the instructions.
+
+```powershell
+New-Item -ItemType Directory -Path E:\TOOLS -Force | Out-Null
+git clone https://github.com/abanerjee84/FLUX3-MCP.git E:\TOOLS\FLUX3-MCP
+Set-Location E:\TOOLS\FLUX3-MCP
+```
+
+If the project is already in that folder, use the existing checkout; do not clone over it. The launcher and agent registrations use absolute paths, so keep the folder in place after installation.
+
+### 3. Install the application
+
+From the project folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+```
+
+Let this finish before continuing. It creates `.venv`, installs Python 3.12 when needed, installs CUDA PyTorch and the application dependencies, and adds `flux-image` to your user PATH. The execution-policy override applies only to this PowerShell process.
+
+**This step installs the application, not the model weights.** The next two steps handle account access and the model download.
+
+### 4. Sign in to Hugging Face
+
+Open both model pages in your browser. Sign in and complete an access form if one is shown:
+
+- [Main Klein repository](https://huggingface.co/black-forest-labs/flux-3-image-klein)
+- [Official INT8 ConvRot weights repository](https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy)
+
+These are separate repositories; access to one does not automatically establish access to the other. The second name contains `comfy`, but this application uses only its weight file and does not install ComfyUI.
+
+Sign the local CLI in to the **same Hugging Face account**:
 
 ```powershell
 .\.venv\Scripts\hf.exe auth login
 ```
 
-The `-comfy` repository supplies the official quantized checkpoint. Downloading it does not install or launch ComfyUI.
+Follow the prompts in your terminal. Keep the token in the local authentication flow; it does not belong in a prompt file or repository file.
 
-### 4. Download and verify weights
+### 5. Download the models
 
 ```powershell
 .\.venv\Scripts\python.exe -m flux_image setup-models
 ```
 
-Downloads resume after interruption. Large files use validated byte ranges and final SHA-256 checks before installation. No upsampler or base image-transformer weights are downloaded. BF16 encoder weights are downloaded as the source for NF4 quantization when loading.
+Allow time and disk space for about **15 GB of weights**, plus the environment and download caches. Progress is printed while downloading, and large files are checked against their SHA-256 hashes before installation.
 
-If Hugging Face access is already configured, combine the installation and download:
+If the download is interrupted, run the same command again to resume. If it returns 403, revisit **both** model pages and confirm that the CLI is signed in to the account with access.
+
+The download includes the INT8 image transformer, VAE and source weights needed to quantize the text encoder to NF4. It does not include a prompt upsampler or the base image transformer.
+
+### 6. Connect your agent, if you want MCP tools
+
+Run only the row for the harness you use. Run more than one row if you use several harnesses. These commands work before refreshing PATH:
+
+| Your agent harness | Run from the project folder |
+|---|---|
+| Codex | `.\.venv\Scripts\python.exe -m flux_image register codex` |
+| Claude Code | `.\.venv\Scripts\python.exe -m flux_image register claude-code` |
+| Gemini CLI | `.\.venv\Scripts\python.exe -m flux_image register gemini` |
+| Another MCP client | `.\.venv\Scripts\python.exe -m flux_image mcp-config` |
+
+For another client, copy the generated configuration into that client's MCP settings. See [Agent harness integration](#agent-harness-integration) for details.
+
+Registration is user-level, so it applies across projects in that harness. Existing unrelated settings are preserved. **Restart the harness** after registration to discover the `local-flux` tools.
+
+### 7. Verify the installation
+
+Open a **new PowerShell window**, then run:
+
+```powershell
+flux-image doctor
+```
+
+Check the JSON output:
+
+- `inference.ready` should be `true`.
+- `missing_files` and `missing_packages` should be empty lists.
+- The selected GPU should be your RTX 3060.
+
+`loaded: false` is normal before the first generation. `service_running: false` is also normal after installation: the model server has not been started yet.
+
+If `flux-image` is not recognized, use this from the project folder:
+
+```powershell
+.\bin\flux-image.cmd doctor
+```
+
+The installation is now ready. Follow [Common commands: start to stop](#common-commands-start-to-stop) for a complete first session.
+
+For an already-authenticated Hugging Face account and a Codex installation, the setup script also offers a combined shortcut:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -DownloadModels -RegisterCodex
 ```
 
-### 5. Verify from a new terminal
+## Installation instructions for an agent
+
+Copy the following brief into your local coding agent. It describes the installation task, account handoff and verification; it is not a PowerShell script.
+
+```text
+Install https://github.com/abanerjee84/FLUX3-MCP on this Windows computer.
+
+Use E:\TOOLS\FLUX3-MCP unless I specify another location. If that drive is
+unavailable, choose a permanent user-writable location and tell me its path.
+
+1. Inspect the existing installation first. If the target folder already
+   contains this project, check its remote and working tree, preserve local
+   changes, and reuse its model files. Avoid duplicate model downloads.
+
+2. Verify Windows x64, an RTX 3060 with 12 GB VRAM, an NVIDIA driver compatible
+   with the pinned CUDA wheels, Git and uv. Install missing setup tools using
+   their official instructions. Report a hardware mismatch rather than
+   changing the project's GPU checks or enabling CPU offloading.
+
+3. Clone the repository into the selected permanent location if needed.
+   From that folder, run:
+   powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+   The execution-policy override is process-scoped. Check native command
+   exit codes.
+   The basic setup installs the environment and global CLI, not the models.
+
+4. Use existing Hugging Face authentication if it has the required access.
+   If login or acceptance is needed, let me complete the local hf auth login
+   flow and access forms for both black-forest-labs/flux-3-image-klein and
+   black-forest-labs/flux-3-image-klein-comfy. Keep tokens out of chat, source
+   files and logs.
+
+5. From the project folder, run:
+   .\.venv\Scripts\python.exe -m flux_image setup-models
+   Let downloads and hash verification complete. Resume an interrupted download rather than
+   deleting existing weights. Retain the pinned model revisions, official
+   INT8 ConvRot transformer and NF4 encoder. Do not add a prompt upsampler.
+
+6. Register the harness I am using at user scope. From the project folder, run:
+   .\.venv\Scripts\python.exe -m flux_image register HARNESS
+   Replace HARNESS with codex, claude-code, or gemini. For another client, run:
+   .\.venv\Scripts\python.exe -m flux_image mcp-config
+   Provide its client-specific setup. Preserve unrelated configuration and
+   inspect a conflicting local-flux entry before changing
+   it. Explain that the harness must restart to load the registration.
+
+7. Verify flux-image doctor using the new executable path if the current
+   terminal has stale PATH. Confirm the data directory, selected GPU,
+   inference.ready=true, and empty missing-files/missing-packages lists.
+   Check command failures and report unresolved dependency or access errors.
+   Do not describe installation as successful while these checks fail.
+
+8. Finish with the image server stopped unless I explicitly request it
+   running. Leave image generation and GPU validation for a requested smoke
+   test. Report the installation path, registered harness, verification
+   results, and the commands to start and stop the server.
+
+Keep models, .venv, generated images and local credentials out of Git.
+```
+
+## Common commands: start to stop
+
+After installation, open a new PowerShell window. These commands work from any folder. Output paths below are relative to your current folder, so choose a folder where you want to save images.
+
+### 1. Start the server
 
 ```powershell
-flux-image doctor
 flux-image start
 ```
 
-`start` launches the API/MCP service. Models load on the first image job and remain resident for later calls. The first cold job includes loading and encoder quantization.
+This starts the background API/MCP service. It does not load the models yet. The first image request loads them; later requests reuse them.
 
-If PATH has not refreshed, use either form from the checkout:
+### 2. Check readiness
 
 ```powershell
-.\bin\flux-image.cmd doctor
-.\.venv\Scripts\python.exe -m flux_image doctor
+flux-image doctor
 ```
+
+Look for `inference.ready: true` and `service_running: true`. `loaded` becomes true after a successful model load.
+
+### 3. Generate and save an image
+
+```powershell
+flux-image generate --prompt "Studio photograph of one matte red ceramic teapot on a gray tabletop, curved handle on the left, short spout on the right, fitted lid, white background and soft light from the upper left." --width 768 --height 768 --seed 7 --out teapot-red.png
+```
+
+`--out` waits for the image and saves it. For a longer caption, use `--prompt-file prompt.txt` instead of `--prompt`.
+
+### 4. Edit the image and save the result
+
+```powershell
+flux-image edit --image teapot-red.png --prompt "The same studio photograph with one matte cobalt blue ceramic teapot on the gray tabletop, curved handle on the left, short spout on the right, fitted lid, the same white background and soft light from the upper left." --width 768 --height 768 --seed 7 --out teapot-blue.png
+```
+
+You can now inspect `teapot-red.png` and `teapot-blue.png`. For higher resolution, set both dimensions to 1024; it takes more time and GPU memory.
+
+### 5. Submit a background job and check it
+
+Use this mode when you want the job ID immediately instead of waiting inside `generate`:
+
+```powershell
+$imageJob = flux-image generate --prompt "Studio photograph of one red ceramic teapot on a pale gray table, white background, soft light from the left and a gentle contact shadow." --width 768 --height 768 --seed 21 | ConvertFrom-Json
+$imageJobId = $imageJob.job_id
+
+flux-image status $imageJobId
+flux-image wait $imageJobId --timeout 600
+flux-image download $imageJobId --out teapot-background-job.png
+```
+
+If you decide to cancel an unfinished job, use `flux-image cancel $imageJobId` instead of the wait/download steps. A client wait timeout does not cancel the job.
+
+### 6. Get help when needed
+
+```powershell
+flux-image --help
+flux-image generate --help
+flux-image edit --help
+```
+
+### 7. Stop the server and end the session
+
+Closing the terminal alone leaves the background service running. This command stops it and releases its model process and GPU memory:
+
+```powershell
+flux-image stop
+```
+
+A later CLI generation/edit request or an MCP tool call that needs the backend can start the service again automatically.
 
 ## Generate and edit
 
