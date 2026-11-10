@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "local-flux": {
+      "command": "C:/AI/FLUX3-MCP/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "flux_image",
+        "mcp"
+      ],
+      "env": {
+        "FLUX_IMAGE_HOME": "C:/AI/FLUX3-MCP/data"
+      }
+    }
+  }
+}

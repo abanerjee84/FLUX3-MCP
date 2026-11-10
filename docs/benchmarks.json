@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "measured_at_utc": "2026-11-10T19:58:09.729099+00:00",
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "vram_mib": 12288,
+    "driver": "610.88",
+    "os": "Windows x64",
+    "python": "3.12.9"
+  },
+  "model": {
+    "transformer": "FLUX 3 Image Klein distilled INT8 ConvRot",
+    "text_encoder": "Qwen3-VL-4B NF4",
+    "upsampler": false,
+    "cpu_offload": false
+  },
+  "runs": [
+    {
+      "case": "generate-512",
+      "status": "succeeded",
+      "elapsed_seconds": 171.28,
+      "width": 512,
+      "height": 512,
+      "steps": 16,
+      "seed": 7,
+      "reference_count": 0,
+      "peak_allocated_mib": 8734.3,
+      "peak_reserved_mib": 9160.0,
+      "driver": {
+        "available": true,
+        "samples": 278,
+        "peak_dedicated_mib": 9291.23,
+        "peak_shared_mib": 78.0
+      },
+      "residency": {
+        "all_model_tensors_on_cuda": true,
+        "resident_model_mib": 8397.1,
+        "offload_hooks": false
+      }
+    },
+    {
+      "case": "edit-512",
+      "status": "succeeded",
+      "elapsed_seconds": 10.78,
+      "width": 512,
+      "height": 512,
+      "steps": 16,
+      "seed": 7,
+      "reference_count": 1,
+      "peak_allocated_mib": 8912.3,
+      "peak_reserved_mib": 9316.0,
+      "driver": {
+        "available": true,
+        "samples": 20,
+        "peak_dedicated_mib": 9451.23,
+        "peak_shared_mib": 78.0
+      },
+      "residency": {
+        "all_model_tensors_on_cuda": true,
+        "resident_model_mib": 8397.1,
+        "offload_hooks": false
+      }
+    },
+    {
+      "case": "generate-768",
+      "status": "succeeded",
+      "elapsed_seconds": 12.48,
+      "width": 768,
+      "height": 768,
+      "steps": 16,
+      "seed": 7,
+      "reference_count": 0,
+      "peak_allocated_mib": 8919.9,
+      "peak_reserved_mib": 9514.0,
+      "driver": {
+        "available": true,
+        "samples": 23,
+        "peak_dedicated_mib": 9649.23,
+        "peak_shared_mib": 78.0
+      },
+      "residency": {
+        "all_model_tensors_on_cuda": true,
+        "resident_model_mib": 8397.1,
+        "offload_hooks": false
+      }
+    },
+    {
+      "case": "generate-1024",
+      "status": "succeeded",
+      "elapsed_seconds": 23.38,
+      "width": 1024,
+      "height": 1024,
+      "steps": 16,
+      "seed": 7,
+      "reference_count": 0,
+      "peak_allocated_mib": 9174.3,
+      "peak_reserved_mib": 10074.0,
+      "driver": {
+        "available": true,
+        "samples": 45,
+        "peak_dedicated_mib": 10209.23,
+        "peak_shared_mib": 78.0
+      },
+      "residency": {
+        "all_model_tensors_on_cuda": true,
+        "resident_model_mib": 8397.1,
+        "offload_hooks": false
+      }
+    },
+    {
+      "case": "edit-1024",
+      "status": "succeeded",
+      "elapsed_seconds": 54.97,
+      "width": 1024,
+      "height": 1024,
+      "steps": 16,
+      "seed": 7,
+      "reference_count": 1,
+      "peak_allocated_mib": 9882.5,
+      "peak_reserved_mib": 10662.0,
+      "driver": {
+        "available": true,
+        "samples": 107,
+        "peak_dedicated_mib": 10797.24,
+        "peak_shared_mib": 78.0
+      },
+      "residency": {
+        "all_model_tensors_on_cuda": true,
+        "resident_model_mib": 8397.1,
+        "offload_hooks": false
+      }
+    }
+  ],
+  "live_mcp": {
+    "stdio_edit": "passed",
+    "http_image_preview": "passed",
+    "elapsed_seconds": 14.76
+  },
+  "caveats": [
+    "First generation includes cold loading and encoder quantization.",
+    "Single test scene and seed; not a statistical performance benchmark.",
+    "A small CUDA-only allocation test measured 76 MiB shared Windows GPU memory.",
+    "Runtime paths, job IDs, GPU UUIDs, input images and generated images are omitted."
+  ]
+}
