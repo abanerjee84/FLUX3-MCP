@@ -9,6 +9,7 @@ Built and tested for an **NVIDIA RTX 3060 with 12 GB VRAM on Windows**:
 - The host agent supplies the final prompt. There is **no prompt upsampler**.
 - No ComfyUI application, CPU model offloading, or automatic switch to another GPU.
 - MCP over stdio and Streamable HTTP, plus REST and a command-line interface.
+- **Random seeds:** use `--seed -1` in the CLI or `"seed": -1` in MCP/HTTP requests.
 
 **Model weights are not included in this repository.** A separate setup command downloads the pinned files from Hugging Face into an ignored local directory.
 
@@ -22,6 +23,7 @@ For a first installation, follow the [step-by-step guide](#installation) or give
 - [Installation instructions for an agent](#installation-instructions-for-an-agent)
 - [Common commands: start to stop](#common-commands-start-to-stop)
 - [Generate and edit](#generate-and-edit)
+- [Random seeds: `--seed -1`](#random-seeds)
 - [Complete CLI reference](#complete-cli-reference)
 - [Agent harness integration](#agent-harness-integration)
 - [MCP tools](#mcp-tools)
@@ -329,6 +331,39 @@ A later CLI generation/edit request or an MCP tool call that needs the backend c
 
 ## Generate and edit
 
+### Random seeds
+
+**`--seed -1` selects a random seed for each new generation or edit.** The same option is available as `"seed": -1` through MCP and HTTP.
+
+Generate with a random seed:
+
+```powershell
+flux-image generate --prompt "Studio photograph of a red ceramic teapot on a pale gray table, plain white background, soft light from the left and a gentle contact shadow." --seed -1 --out .\data\random-image.png
+```
+
+Edit with a random seed:
+
+```powershell
+flux-image edit --image .\data\random-image.png --prompt "Studio photograph of the same ceramic teapot, now cobalt blue, on the pale gray table, plain white background, the same soft light from the left and gentle contact shadow." --seed -1 --out .\data\random-edit.png
+```
+
+MCP `generate_image` arguments or an HTTP `POST /v1/jobs` body:
+
+```json
+{
+  "prompt": "Studio photograph of a red ceramic teapot on a pale gray table, plain white background, soft light from the left.",
+  "seed": -1
+}
+```
+
+| Seed input | Behavior |
+|---|---|
+| `-1` | Draw a random nonnegative 32-bit seed |
+| Omitted or `null` | Draw a random seed, the default behavior |
+| `0` to `4294967295` | Use that fixed seed |
+
+The service resolves a random seed once when queuing the job and records its actual value in the returned request and output metadata. Retrying with the same `client_request_id`/`--request-id` reuses the original job and seed. Omit that ID or use a new one for another random draw.
+
 ### Generate
 
 Write a UTF-8 prompt file containing a complete scene caption:
@@ -385,8 +420,6 @@ flux-image cancel JOB_ID
 ```
 
 A stable request ID makes retries of the identical request return the original job and seed. A different request using that ID is rejected. Closing a client or timing out a wait does not cancel inference.
-
-Use `--seed -1` for a random seed in generation or editing. Omitting the seed, or sending `null` through HTTP/MCP, also selects a random seed. The service chooses a nonnegative 32-bit value once when it queues the job and stores that value in the request and output metadata. Retrying with the same request ID reuses the original job and resolved seed; submit without that ID or use a new one for a fresh random draw.
 
 ## Complete CLI reference
 
